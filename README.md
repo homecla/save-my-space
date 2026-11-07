@@ -93,3 +93,11 @@ make test                    # tests (require Xcode)
 - `Sources/smspace` — CLI (swift-argument-parser)
 - `Sources/SaveMySpaceApp` — SwiftUI interface
 - `Tests/SaveMySpaceCoreTests` — tests on fake home folders in temporary directories
+
+## License
+
+Copyright © 2026 homecla.
+
+Save My Space is free software: you can redistribute it and/or modify it under the terms of the
+[GNU Affero General Public License v3.0](LICENSE). Third-party components and their licenses
+are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

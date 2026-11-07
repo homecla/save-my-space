@@ -18,6 +18,8 @@ app: release
 	mkdir -p "$(APP)/Contents/MacOS"; \
 	cp "$$BIN/SaveMySpaceApp" "$(APP)/Contents/MacOS/SaveMySpaceApp"; \
 	cp Resources/Info.plist "$(APP)/Contents/Info.plist"; \
+	mkdir -p "$(APP)/Contents/Resources"; \
+	cp LICENSE THIRD_PARTY_NOTICES.md "$(APP)/Contents/Resources/"; \
 	echo "Creata $(APP)"
 
 install: app
