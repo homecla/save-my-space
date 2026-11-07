@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 homecla
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 PREFIX  ?= $(HOME)/.local
 APPDIR  ?= $(HOME)/Applications
 APP     := dist/Save My Space.app

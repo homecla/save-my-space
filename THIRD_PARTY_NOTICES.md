@@ -1,6 +1,7 @@
 # Third-party notices
 
-Save My Space is licensed under the GNU Affero General Public License v3.0 (see `LICENSE`).
+Save My Space is licensed under the GNU Affero General Public License, version 3 or (at your option)
+any later version (`AGPL-3.0-or-later`, see `LICENSE`).
 It uses the following third-party components:
 
 | Component | Version | License | Used by |

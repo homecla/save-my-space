@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 homecla
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import Foundation
 
 /// Riconosce le cartelle rigenerabili dentro i progetti software (dipendenze, output di build).

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 homecla
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import Foundation
 
 /// Stato di ripristino di un elemento spostato nel Cestino, ricavato dal file system.

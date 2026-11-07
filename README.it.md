@@ -100,5 +100,9 @@ make test                    # test (richiede Xcode)
 Copyright © 2026 homecla.
 
 Save My Space è software libero: puoi redistribuirlo e/o modificarlo secondo i termini della
-[GNU Affero General Public License v3.0](LICENSE). I componenti di terze parti e le relative
+[GNU Affero General Public License](LICENSE) pubblicata dalla Free Software Foundation, versione 3
+o (a tua scelta) qualunque versione successiva (SPDX: `AGPL-3.0-or-later`).
+
+Questo programma è distribuito nella speranza che sia utile, ma SENZA ALCUNA GARANZIA; senza
+neppure la garanzia implicita di COMMERCIABILITÀ o IDONEITÀ PER UN FINE PARTICOLARE. I componenti di terze parti e le relative
 licenze sono elencati in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
