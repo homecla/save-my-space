@@ -7,7 +7,7 @@ APP     := dist/Save My Space.app
 # I test (Swift Testing) richiedono la toolchain di Xcode.
 XCODE   ?= /Applications/Xcode.app/Contents/Developer
 
-.PHONY: build release app install test clean
+.PHONY: build release app install test sast clean
 
 build:
 	swift build
@@ -35,6 +35,11 @@ install: app
 
 test:
 	DEVELOPER_DIR=$(XCODE) swift test
+
+# SAST: regole specifiche del progetto (opengrep o semgrep) e ricerca di segreti (gitleaks).
+sast:
+	opengrep scan --config .opengrep/save-my-space.yml --exclude .build --exclude dist --error .
+	gitleaks git . --no-banner --redact
 
 clean:
 	swift package clean

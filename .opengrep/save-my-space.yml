@@ -1,0 +1,93 @@
+# SPDX-FileCopyrightText: 2026 homecla
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Project-specific SAST rules for Save My Space (opengrep / semgrep).
+# Run: opengrep scan --config .opengrep/ --exclude .build .
+
+rules:
+  - id: no-permanent-delete
+    languages: [swift]
+    severity: ERROR
+    message: >-
+      Permanent deletion is forbidden: Save My Space must only move items to the Trash
+      (FileManager.trashItem) so that every cleanup can be restored.
+    patterns:
+      - pattern-either:
+          - pattern: '$FM.removeItem(at: $X)'
+          - pattern: '$FM.removeItem(atPath: $X)'
+          - pattern: 'unlink($X)'
+          - pattern: 'rmdir($X)'
+          - pattern: 'remove($X)'
+    paths:
+      include: [Sources/]
+
+  - id: file-move-outside-guarded-code
+    languages: [swift]
+    severity: ERROR
+    message: >-
+      Files may only be moved by Cleaner (after validate()) or Restorer (after state()).
+      Moving files elsewhere bypasses the home/protected-path/symlink checks.
+    pattern-either:
+      - pattern: '$FM.moveItem(at: $A, to: $B)'
+      - pattern: '$FM.moveItem(atPath: $A, toPath: $B)'
+      - pattern: '$FM.trashItem(at: $A, resultingItemURL: $B)'
+      - pattern: 'rename($A, $B)'
+    paths:
+      include: [Sources/]
+      exclude: [Sources/SaveMySpaceCore/Cleaner.swift, Sources/SaveMySpaceCore/Restorer.swift]
+
+  - id: unreliable-path-normalization
+    languages: [swift]
+    severity: WARNING
+    message: >-
+      standardizedFileURL / resolvingSymlinksInPath() strip "/private" only when the shorter
+      path exists, so the same location can compare differently before and after a move.
+      Use `.standardized` for lexical normalization and `.canonical` (realpath) for symlinks.
+    pattern-either:
+      - pattern: '$U.standardizedFileURL'
+      - pattern: '$U.resolvingSymlinksInPath()'
+      - pattern: '($S as NSString).standardizingPath'
+    paths:
+      include: [Sources/SaveMySpaceCore/]
+
+  - id: external-process-execution
+    languages: [swift]
+    severity: WARNING
+    message: >-
+      Launching an external process. Make sure the executable path is not derived from
+      untrusted input (history file, scanned file names, environment).
+    pattern-either:
+      - pattern: '$P.executableURL = $X'
+      - pattern: 'Process.launchedProcess(launchPath: $X, arguments: $A)'
+      - pattern: 'system($X)'
+      - pattern: 'popen($X, $M)'
+    paths:
+      include: [Sources/]
+
+  - id: force-try
+    languages: [swift]
+    severity: WARNING
+    message: "`try!` crashes the program on error; handle or propagate the error instead."
+    pattern-regex: '\btry!\s'
+    paths:
+      include: [Sources/]
+
+  - id: force-cast
+    languages: [swift]
+    severity: INFO
+    message: "Forced cast `as!` crashes on unexpected types; prefer `as?`."
+    pattern-regex: '\bas!\s'
+    paths:
+      include: [Sources/]
+
+  - id: argv0-as-path
+    languages: [swift]
+    severity: ERROR
+    message: >-
+      CommandLine.arguments[0] is just "smspace" when the command is found through PATH and
+      would resolve against the current directory (binary planting). Use Bundle.main.executableURL.
+    pattern-either:
+      - pattern: 'CommandLine.arguments[0]'
+      - pattern: 'CommandLine.arguments.first'
+    paths:
+      include: [Sources/]

@@ -264,7 +264,7 @@ struct Clean: AsyncParsableCommand {
         let cleaner = Cleaner(root: URL(fileURLWithPath: scanReport.root))
         let result = cleaner.clean(selected) { f, error in
             let path = Output.shortPath(f.path, root: scanReport.root)
-            print(error.map { Terminal.red("  ✗ \(path): \($0)") } ?? Terminal.green("  ✓ \(path)"))
+            print(error.map { Terminal.red("  ✗ \(path): " + Sanitize.forTerminal($0)) } ?? Terminal.green("  ✓ \(path)"))
         }
         print()
         let freed = SizeFormatter.string(result.freedBytes)
@@ -300,9 +300,14 @@ struct Gui: ParsableCommand {
     }
 
     func run() throws {
-        let exe = URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath()
-        let candidates = [
-            exe.deletingLastPathComponent().appendingPathComponent("SaveMySpaceApp"),
+        // Percorso reale del binario: argv[0] contiene solo "smspace" quando il comando è trovato
+        // tramite PATH, e verrebbe risolto rispetto alla cartella corrente (esecuzione di un
+        // eventuale "SaveMySpaceApp" piazzato lì).
+        var candidates: [URL] = []
+        if let exe = Bundle.main.executableURL?.resolvingSymlinksInPath(), exe.path.hasPrefix("/") {
+            candidates.append(exe.deletingLastPathComponent().appendingPathComponent("SaveMySpaceApp"))
+        }
+        candidates += [
             URL(fileURLWithPath: "/Applications/Save My Space.app"),
             FileManager.default.homeDirectoryForCurrentUser
                 .appendingPathComponent("Applications/Save My Space.app"),
@@ -316,9 +321,11 @@ struct Gui: ParsableCommand {
         process.environment = ProcessInfo.processInfo.environment.merging(
             ["SMSPACE_LANG": L10n.language.rawValue]) { $1 }
         if target.pathExtension == "app" {
+            // nosemgrep: external-process-execution -- percorso costante di sistema
             process.executableURL = URL(fileURLWithPath: "/usr/bin/open")
             process.arguments = ["--env", "SMSPACE_LANG=\(L10n.language.rawValue)", target.path]
         } else {
+            // nosemgrep: external-process-execution -- target scelto fra percorsi fissi (binario reale, /Applications)
             process.executableURL = target
         }
         try process.run()
@@ -365,12 +372,12 @@ struct History: ParsableCommand {
                     let state = Restorer().state(of: t, root: entry.root)
                     let location = state == .restorable
                         ? tr("in the Trash: ", "nel Cestino: ") + Output.shortPath(to, root: entry.root)
-                        : state.label
+                        : Sanitize.forTerminal(state.label)
                     print(String(repeating: " ", count: 12) + Terminal.dim(location))
                 }
             }
             for f in entry.failed {
-                print(Terminal.red("    ✗ \(Output.shortPath(f.finding.path, root: entry.root)): \(f.message)"))
+                print(Terminal.red("    ✗ \(Output.shortPath(f.finding.path, root: entry.root)): " + Sanitize.forTerminal(f.message)))
             }
         }
         print()
@@ -462,7 +469,7 @@ struct Restore: ParsableCommand {
                 restorable.append(item)
                 print(line)
             } else {
-                print(Terminal.dim(line + "  — \(state.label)"))
+                print(Terminal.dim(line + "  — " + Sanitize.forTerminal(state.label)))
             }
         }
         print()
@@ -489,7 +496,7 @@ struct Restore: ParsableCommand {
         }
         let result = restorer.restore(restorable, root: chosen.root) { item, error in
             let p = Output.shortPath(item.finding.path, root: chosen.root)
-            print(error.map { Terminal.red("  ✗ \(p): \($0)") } ?? Terminal.green("  ✓ \(p)"))
+            print(error.map { Terminal.red("  ✗ \(p): " + Sanitize.forTerminal($0)) } ?? Terminal.green("  ✓ \(p)"))
         }
         print()
         let restored = SizeFormatter.string(result.restoredBytes)

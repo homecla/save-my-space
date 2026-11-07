@@ -44,8 +44,9 @@ enum Encoding {
 
     static func date(_ d: Date?) -> String { d.map(dateFormatter.string(from:)) ?? "" }
 
-    static func csvField(_ s: String) -> String {
-        s.contains(where: { $0 == "," || $0 == "\"" || $0 == "\n" })
+    static func csvField(_ raw: String) -> String {
+        let s = Sanitize.forSpreadsheet(raw)
+        return s.contains(where: { $0 == "," || $0 == "\"" || $0 == "\n" })
             ? "\"" + s.replacingOccurrences(of: "\"", with: "\"\"") + "\""
             : s
     }

@@ -320,3 +320,15 @@ private func scan(_ home: FakeHome, large: Int64 = 5_000_000) throws -> ScanRepo
     #expect(Risk.safe.label == "sicuro")
     #expect(CleanupCategory.largeFiles.label == "File grandi")
 }
+
+@Test func terminalOutputNeutralizesControlCharacters() {
+    #expect(Sanitize.forTerminal("ok\u{1B}[2Kx\u{7}\ny\u{9B}") == "ok\\x1b[2Kx\\x07\\x0ay\\x9b")
+    #expect(Sanitize.forTerminal("/Users/a/Café 📦.dmg") == "/Users/a/Café 📦.dmg")
+}
+
+@Test func csvCellsCannotBecomeFormulas() {
+    #expect(Sanitize.forSpreadsheet("=HYPERLINK(\"x\")") == "'=HYPERLINK(\"x\")")
+    #expect(Sanitize.forSpreadsheet("+1") == "'+1")
+    #expect(Sanitize.forSpreadsheet("/Users/a/b") == "/Users/a/b")
+    #expect(Encoding.csvLine(["@cmd", "ok"]) == "'@cmd,ok")
+}

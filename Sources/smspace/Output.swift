@@ -37,11 +37,12 @@ enum Terminal {
 }
 
 enum Output {
+    /// Percorso abbreviato con `~` e reso sicuro per il terminale.
     static func shortPath(_ path: String, root: String) -> String {
         let home = FileManager.default.homeDirectoryForCurrentUser.path
         if path == home { return "~" }
-        if path.hasPrefix(home + "/") { return "~" + path.dropFirst(home.count) }
-        return path
+        if path.hasPrefix(home + "/") { return Sanitize.forTerminal("~" + path.dropFirst(home.count)) }
+        return Sanitize.forTerminal(path)
     }
 
     static func riskLabel(_ risk: Risk) -> String {
@@ -100,10 +101,10 @@ enum Output {
 
     static func finding(_ f: Finding, root: String) {
         print(size(f.size) + "  " + riskLabel(f.risk) + Terminal.cyan(shortPath(f.path, root: root)))
-        print(String(repeating: " ", count: 28) + Terminal.dim(f.reason))
+        print(String(repeating: " ", count: 28) + Terminal.dim(Sanitize.forTerminal(f.reason)))
         if let hint = f.hint {
             let prefix = f.actionable ? tr("tip", "suggerimento") : tr("do it manually", "da fare a mano")
-            print(String(repeating: " ", count: 28) + Terminal.dim("→ \(prefix): \(hint)"))
+            print(String(repeating: " ", count: 28) + Terminal.dim("→ \(prefix): " + Sanitize.forTerminal(hint)))
         }
     }
 }
