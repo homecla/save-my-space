@@ -56,7 +56,7 @@ struct ContentView: View {
                     .monospacedDigit()
             }
         }
-        .tag(Optional(SidebarItem(category: category)))
+        .tag(SidebarItem(category: category))
     }
 
     @ViewBuilder
