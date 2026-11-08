@@ -32,7 +32,7 @@ struct SaveMySpaceApp: App {
             CommandGroup(after: .newItem) {
                 Button(tr("Analyze", "Analizza")) { model.scan() }
                     .keyboardShortcut("r")
-                    .disabled(model.isScanning)
+                    .disabled(model.isBusy)
             }
         }
 

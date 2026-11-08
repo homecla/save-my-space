@@ -61,11 +61,13 @@ struct ContentView: View {
 
     @ViewBuilder
     private var detail: some View {
-        if model.isScanning {
+        if model.isBusy {
             VStack(spacing: 12) {
                 ProgressView()
                 Text(model.progressText).foregroundStyle(.secondary).monospacedDigit()
-                Button(tr("Cancel", "Annulla")) { model.cancelScan() }
+                if model.isScanning {
+                    Button(tr("Cancel", "Annulla")) { model.cancelScan() }
+                }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if model.report == nil {
@@ -116,9 +118,18 @@ struct ContentView: View {
             Text(message)
                 .font(.callout)
                 .foregroundStyle(.secondary)
-                .textSelection(.enabled)
-                .fixedSize(horizontal: false, vertical: true)
+                // Niente .textSelection/.fixedSize: con un testo su più righe sopra la List
+                // mandano in tilt il layout e la finestra resta vuota (macOS 27).
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .contextMenu {
+                    Button(tr("Copy message", "Copia messaggio")) {
+                        NSPasteboard.general.clearContents()
+                        NSPasteboard.general.setString(message, forType: .string)
+                    }
+                }
+            Button(tr("Analyze again", "Analizza di nuovo")) { model.scan() }
+                .controlSize(.small)
+                .disabled(model.isBusy)
             Button {
                 model.lastMessage = nil
             } label: {
@@ -167,7 +178,7 @@ struct ContentView: View {
                 Button(tr("Show cleanup history", "Mostra storico delle pulizie")) { model.revealHistory() }
                 Divider()
                 Button(tr("Restore last cleanup…", "Ripristina ultima pulizia…")) { model.restoreLastClean() }
-                    .disabled(model.isScanning)
+                    .disabled(model.isBusy)
             } label: {
                 Label("Report", systemImage: "doc.text.magnifyingglass")
             }
@@ -178,7 +189,7 @@ struct ContentView: View {
             } label: {
                 Label(tr("Select safe", "Seleziona sicuri"), systemImage: "checkmark.circle")
             }
-            .disabled(model.report == nil || model.isScanning)
+            .disabled(model.report == nil || model.isBusy)
             .help(tr("Select all items with \"safe\" risk", "Seleziona tutti gli elementi a rischio \"sicuro\""))
 
             Button(role: .destructive) {
@@ -186,14 +197,14 @@ struct ContentView: View {
             } label: {
                 Label(tr("Move to Trash", "Sposta nel Cestino"), systemImage: "trash")
             }
-            .disabled(model.selectedFindings.isEmpty || model.isScanning)
+            .disabled(model.selectedFindings.isEmpty || model.isBusy)
 
             Button {
                 model.scan()
             } label: {
                 Label(tr("Analyze", "Analizza"), systemImage: "arrow.clockwise")
             }
-            .disabled(model.isScanning)
+            .disabled(model.isBusy)
         }
     }
 }

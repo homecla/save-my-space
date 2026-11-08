@@ -14,6 +14,9 @@ final class AppModel {
     var findings: [Finding] = []
     var selection: Set<String> = []
     var isScanning = false
+    /// `true` mentre la pulizia sposta gli elementi nel Cestino (l'interfaccia mostra l'avanzamento).
+    var isCleaning = false
+    var isBusy: Bool { isScanning || isCleaning }
     var progressText = ""
     var maxRisk: Risk = .caution
     var lastMessage: String?
@@ -68,6 +71,7 @@ final class AppModel {
     var selectedSize: Int64 { selectedFindings.reduce(0) { $0 + $1.size } }
 
     func scan() {
+        guard !isCleaning else { return }
         scanTask?.cancel()
         isScanning = true
         lastMessage = nil
@@ -117,9 +121,33 @@ final class AppModel {
         }
     }
 
+    /// Sposta la selezione nel Cestino in background, dopo che il dialogo di conferma si è chiuso:
+    /// modificare le liste mentre il dialogo si chiude, bloccando il thread principale,
+    /// può lasciare la finestra vuota.
     func moveSelectionToTrash() {
+        let items = selectedFindings
+        guard !items.isEmpty, !isBusy else { return }
+        isCleaning = true
+        lastMessage = nil
+        progressText = tr("Moving to the Trash… 0/\(items.count)", "Spostamento nel Cestino… 0/\(items.count)")
         let cleaner = Cleaner(root: root)
-        let result = cleaner.clean(selectedFindings)
+        Task {
+            // Lascia terminare la chiusura del dialogo prima di toccare lo stato.
+            await Task.yield()
+            let total = items.count
+            let result = await Task.detached(priority: .userInitiated) {
+                var done = 0
+                return cleaner.clean(items) { _, _ in
+                    done += 1
+                    let text = tr("Moving to the Trash… \(done)/\(total)", "Spostamento nel Cestino… \(done)/\(total)")
+                    Task { @MainActor in self.progressText = text }
+                }
+            }.value
+            finishCleaning(result)
+        }
+    }
+
+    private func finishCleaning(_ result: CleanResult) {
         let trashedPaths = Set(result.trashed.map(\.finding.path))
         findings.removeAll { trashedPaths.contains($0.path) }
         selection.subtract(trashedPaths)
@@ -145,6 +173,7 @@ final class AppModel {
             message += tr("History not updated: ", "Storico non aggiornato: ") + error.localizedDescription
         }
         lastMessage = message
+        isCleaning = false
     }
 
     /// Salva su file i suggerimenti visibili (categoria e rischio correnti).
