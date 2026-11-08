@@ -28,7 +28,7 @@ struct KnownLocation: Sendable {
             ]
         ),
         KnownLocation(
-            relativePath: "Library/Logs", perChild: false, category: .logs, risk: .safe,
+            relativePath: "Library/Logs", perChild: true, category: .logs, risk: .safe,
             reason: tr("Application logs and crash reports", "File di log delle applicazioni e report dei crash")
         ),
         KnownLocation(

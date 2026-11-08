@@ -101,6 +101,38 @@ struct ContentView: View {
     }
 
     private var header: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            summaryBar
+            if let message = model.lastMessage {
+                messageBar(message)
+            }
+        }
+    }
+
+    private func messageBar(_ message: String) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "info.circle")
+                .foregroundStyle(.secondary)
+            Text(message)
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .textSelection(.enabled)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Button {
+                model.lastMessage = nil
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+            }
+            .buttonStyle(.borderless)
+            .foregroundStyle(.secondary)
+            .help(tr("Dismiss", "Chiudi"))
+        }
+        .padding(.horizontal)
+        .padding(.bottom, 12)
+    }
+
+    private var summaryBar: some View {
         @Bindable var model = model
         return HStack(alignment: .firstTextBaseline, spacing: 24) {
             if model.report != nil {
@@ -117,15 +149,6 @@ struct ContentView: View {
             .frame(width: 300)
         }
         .padding()
-        .overlay(alignment: .bottomLeading) {
-            if let message = model.lastMessage {
-                Text(message)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal)
-                    .padding(.bottom, 2)
-            }
-        }
     }
 
     private func stat(_ title: String, _ value: String) -> some View {

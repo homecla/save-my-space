@@ -6,6 +6,14 @@ import Foundation
 public struct CleanFailure: Codable, Sendable {
     public let finding: Finding
     public let message: String
+    /// Valorizzato quando macOS ha negato il permesso (assente negli storici più vecchi).
+    public var permissionDenied: Bool?
+
+    public init(finding: Finding, message: String, permissionDenied: Bool? = nil) {
+        self.finding = finding
+        self.message = message
+        self.permissionDenied = permissionDenied
+    }
 }
 
 /// Un elemento spostato nel Cestino, con la posizione in cui è finito (per poterlo ripristinare).
@@ -50,7 +58,7 @@ public struct Cleaner: Sendable {
     /// Cartelle che non vanno mai spostate in blocco, anche se un suggerimento le indicasse.
     private var protectedPaths: Set<String> {
         Set(["", "Library", "Desktop", "Documents", "Downloads", "Pictures", "Movies", "Music",
-             "Applications", ".Trash", "Library/Caches", "Library/Mobile Documents"]
+             "Applications", ".Trash", "Library/Caches", "Library/Logs", "Library/Mobile Documents"]
             .map { $0.isEmpty ? root.path : root.appendingPathComponent($0).path })
     }
 
@@ -82,10 +90,20 @@ public struct Cleaner: Sendable {
                 result.trashed.append(TrashedItem(finding: f, trashedTo: destination?.path))
                 onItem?(f, nil)
             } catch {
-                result.failed.append(CleanFailure(finding: f, message: error.localizedDescription))
-                onItem?(f, error.localizedDescription)
+                let failure = Self.failure(for: f, error: error)
+                result.failed.append(failure)
+                onItem?(f, failure.message)
             }
         }
         return result
+    }
+
+    /// Traduce gli errori di permesso in una spiegazione con il rimedio; gli altri restano come sono.
+    static func failure(for finding: Finding, error: Error) -> CleanFailure {
+        guard PermissionDiagnosis.isPermissionError(error) else {
+            return CleanFailure(finding: finding, message: error.localizedDescription)
+        }
+        let problem = PermissionDiagnosis.diagnose(URL(fileURLWithPath: finding.path))
+        return CleanFailure(finding: finding, message: problem.message, permissionDenied: true)
     }
 }

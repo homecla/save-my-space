@@ -127,15 +127,22 @@ final class AppModel {
         var message = tr("Moved \(result.trashed.count) items to the Trash (\(freed)).",
                          "Spostati nel Cestino \(result.trashed.count) elementi (\(freed)).")
         if !result.failed.isEmpty {
-            message += " " + tr("\(result.failed.count) not moved: ", "\(result.failed.count) non spostati: ")
-                + result.failed.prefix(3).map { "\(($0.finding.path as NSString).lastPathComponent) — \($0.message)" }
-                    .joined(separator: "; ")
+            message += " " + tr("\(result.failed.count) not moved:", "\(result.failed.count) non spostati:")
+            for failure in result.failed.prefix(3) {
+                message += "\n• " + displayPath(failure.finding.path) + " — " + failure.message
+            }
+            if result.failed.count > 3 {
+                message += "\n• " + tr("…and \(result.failed.count - 3) more (see the history).",
+                                        "…e altri \(result.failed.count - 3) (vedi lo storico).")
+            }
+            message += "\n"
         }
+        if !message.hasSuffix("\n") { message += " " }
         do {
             try CleanHistory().append(result)
-            message += " " + tr("Recorded in the history.", "Registrato nello storico.")
+            message += tr("Recorded in the history.", "Registrato nello storico.")
         } catch {
-            message += " " + tr("History not updated: ", "Storico non aggiornato: ") + error.localizedDescription
+            message += tr("History not updated: ", "Storico non aggiornato: ") + error.localizedDescription
         }
         lastMessage = message
     }

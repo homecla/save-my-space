@@ -72,7 +72,9 @@ private func scan(_ home: FakeHome, large: Int64 = 5_000_000) throws -> ScanRepo
     #expect(brew.hint == "brew cleanup --prune=all")
 
     #expect(byPath[home.root.appendingPathComponent("Library/Caches/tiny").path] == nil)
-    #expect(byPath[home.root.appendingPathComponent("Library/Logs").path]?.category == .logs)
+    // Una voce per ogni log: la cartella ~/Library/Logs ha un'ACL di sistema e non si sposta in blocco.
+    #expect(byPath[home.root.appendingPathComponent("Library/Logs").path] == nil)
+    #expect(byPath[home.root.appendingPathComponent("Library/Logs/app.log").path]?.category == .logs)
     #expect(byPath[home.root.appendingPathComponent("Library/Developer/Xcode/DerivedData").path]?.category == .developer)
 }
 
@@ -175,6 +177,43 @@ private func scan(_ home: FakeHome, large: Int64 = 5_000_000) throws -> ScanRepo
     #expect(result.failed.count == 4)
     #expect(!FileManager.default.fileExists(atPath: cache.path))
     #expect(FileManager.default.fileExists(atPath: fakeTrash.appendingPathComponent("app").path))
+}
+
+@Test func libraryLogsFolderIsProtected() throws {
+    let home = try FakeHome()
+    try home.file("Library/Logs/app.log", size: 10)
+    let cleaner = Cleaner(root: home.root) { _ in Issue.record("non doveva spostare nulla"); return nil }
+    let logs = Finding(path: home.root.appendingPathComponent("Library/Logs").path, size: 10,
+                       category: .logs, risk: .safe, reason: "")
+    #expect(cleaner.clean([logs]).failed.count == 1)
+}
+
+@Test func permissionErrorsGetAClearExplanation() throws {
+    let home = try FakeHome()
+    let mine = try home.file("Library/Caches/app/blob", size: 10).deletingLastPathComponent()
+    let cleaner = Cleaner(root: home.root) { _ in
+        throw CocoaError(.fileWriteNoPermission, userInfo: [NSUnderlyingErrorKey: POSIXError(.EPERM)])
+    }
+    let result = cleaner.clean([Finding(path: mine.path, size: 10, category: .caches, risk: .safe, reason: "")])
+    let failure = try #require(result.failed.first)
+    #expect(failure.permissionDenied == true)
+    #expect(failure.message == PermissionProblem.privacyProtected.message)
+
+    let other = Cleaner(root: home.root) { _ in throw CocoaError(.fileNoSuchFile) }
+    let plain = try #require(other.clean([Finding(path: mine.path, size: 10, category: .caches,
+                                                  risk: .safe, reason: "")]).failed.first)
+    #expect(plain.permissionDenied == nil)
+}
+
+@Test func diagnosesLockedItemsAndOtherOwners() throws {
+    let home = try FakeHome()
+    let locked = try home.file("Library/Caches/locked/blob", size: 10).deletingLastPathComponent()
+    #expect(chflags(locked.path, UInt32(UF_IMMUTABLE)) == 0)
+    defer { chflags(locked.path, 0) }
+    #expect(PermissionDiagnosis.diagnose(locked) == .lockedBySystem)
+
+    // /var/root appartiene a root su ogni Mac.
+    #expect(PermissionDiagnosis.diagnose(URL(fileURLWithPath: "/private/var/root")) == .ownedBy("root"))
 }
 
 @Test func symlinkEscapeIsRejected() throws {
