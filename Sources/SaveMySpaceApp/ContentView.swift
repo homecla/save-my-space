@@ -20,9 +20,9 @@ struct ContentView: View {
                 Section(tr("Overview", "Riepilogo")) {
                     sidebarRow(nil, title: tr("All suggestions", "Tutti i suggerimenti"), symbol: "sparkles")
                 }
-                if let report = model.report {
+                if !model.visibleCategories.isEmpty {
                     Section(tr("Categories", "Categorie")) {
-                        ForEach(report.categoryTotals) { t in
+                        ForEach(model.visibleCategories) { t in
                             sidebarRow(t.category, title: t.category.label, symbol: t.category.symbolName)
                         }
                     }

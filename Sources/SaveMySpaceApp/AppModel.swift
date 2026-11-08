@@ -18,7 +18,9 @@ final class AppModel {
     var isCleaning = false
     var isBusy: Bool { isScanning || isCleaning }
     var progressText = ""
-    var maxRisk: Risk = .caution
+    var maxRisk: Risk = .caution {
+        didSet { keepSidebarSelectionVisible() }
+    }
     var lastMessage: String?
     var sidebarCategory: SidebarItem? = SidebarItem(category: nil)
     var confirmingTrash = false
@@ -58,6 +60,18 @@ final class AppModel {
 
     func findings(in category: CleanupCategory?) -> [Finding] {
         findings.filter { (category == nil || $0.category == category) && $0.risk <= maxRisk }
+    }
+
+    /// Categorie con almeno un elemento visibile con il filtro di rischio corrente.
+    var visibleCategories: [CategoryTotal] {
+        (report?.categoryTotals ?? []).filter { !findings(in: $0.category).isEmpty }
+    }
+
+    /// Se la categoria scelta nella sidebar non ha più elementi visibili, torna a "Tutti i suggerimenti".
+    private func keepSidebarSelectionVisible() {
+        if let category = sidebarCategory?.category, findings(in: category).isEmpty {
+            sidebarCategory = SidebarItem(category: nil)
+        }
     }
 
     func total(of category: CleanupCategory?) -> Int64 {
@@ -150,7 +164,9 @@ final class AppModel {
     private func finishCleaning(_ result: CleanResult) {
         let trashedPaths = Set(result.trashed.map(\.finding.path))
         findings.removeAll { trashedPaths.contains($0.path) }
-        selection.subtract(trashedPaths)
+        // Anche ciò che non è stato spostato esce dalla selezione: riprovare fallirebbe di nuovo.
+        selection.subtract(trashedPaths.union(result.failed.map(\.finding.path)))
+        keepSidebarSelectionVisible()
         let freed = SizeFormatter.string(result.freedBytes)
         var message = tr("Moved \(result.trashed.count) items to the Trash (\(freed)).",
                          "Spostati nel Cestino \(result.trashed.count) elementi (\(freed)).")
