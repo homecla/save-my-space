@@ -12,7 +12,7 @@ final class FakeHome {
     init() throws {
         root = FileManager.default.temporaryDirectory
             .appendingPathComponent("save-my-space-tests-\(UUID().uuidString)")
-            .resolvingSymlinksInPath()
+            .canonical
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
     }
 

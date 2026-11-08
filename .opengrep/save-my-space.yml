@@ -48,7 +48,7 @@ rules:
       - pattern: '$U.resolvingSymlinksInPath()'
       - pattern: '($S as NSString).standardizingPath'
     paths:
-      include: [Sources/SaveMySpaceCore/]
+      include: [Sources/SaveMySpaceCore/, Tests/]
 
   - id: external-process-execution
     languages: [swift]
