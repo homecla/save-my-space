@@ -41,8 +41,13 @@ struct ContentView: View {
             Button(tr("Move to Trash", "Sposta nel Cestino"), role: .destructive) { model.moveSelectionToTrash() }
             Button(tr("Cancel", "Annulla"), role: .cancel) {}
         } message: {
-            Text(tr("You can restore them from the Trash until you empty it (Report › Restore last cleanup).",
-                    "Potrai ripristinarli dal Cestino finché non lo svuoti (Report › Ripristina ultima pulizia)."))
+            let risky = model.selectedRiskyCount
+            Text((risky > 0
+                  ? tr("\(risky) of them are not \"safe\": check them before continuing. ",
+                       "\(risky) di questi non sono \"sicuri\": controllali prima di continuare. ")
+                  : "")
+                 + tr("You can restore them from the Trash until you empty it (Report › Restore last cleanup).",
+                      "Potrai ripristinarli dal Cestino finché non lo svuoti (Report › Ripristina ultima pulizia)."))
         }
     }
 
@@ -184,13 +189,23 @@ struct ContentView: View {
             }
             .help(tr("Export the suggestions or open the cleanup history", "Esporta i suggerimenti o apri lo storico delle pulizie"))
 
-            Button {
-                model.selectAllSafe(in: currentCategory)
+            Menu {
+                Button(tr("Select safe", "Seleziona sicuri")) { model.selectAllSafe(in: currentCategory) }
+                Button(tr("Select all shown", "Seleziona tutti quelli visibili")) {
+                    model.selectAllVisible(in: currentCategory)
+                }
+                Divider()
+                Button(tr("Deselect all", "Deseleziona tutto")) { model.deselectAll() }
+                    .disabled(model.selection.isEmpty)
             } label: {
-                Label(tr("Select safe", "Seleziona sicuri"), systemImage: "checkmark.circle")
+                Label(tr("Select", "Seleziona"),
+                      systemImage: model.allVisibleSelected(in: currentCategory) ? "checkmark.circle.fill" : "checkmark.circle")
+            } primaryAction: {
+                model.toggleAllVisible(in: currentCategory)
             }
             .disabled(model.report == nil || model.isBusy)
-            .help(tr("Select all items with \"safe\" risk", "Seleziona tutti gli elementi a rischio \"sicuro\""))
+            .help(tr("Click: select or deselect all shown items. Arrow: more options",
+                     "Clic: seleziona o deseleziona tutti gli elementi visibili. Freccia: altre opzioni"))
 
             Button(role: .destructive) {
                 model.confirmingTrash = true

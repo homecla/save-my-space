@@ -127,6 +127,35 @@ final class AppModel {
         }
     }
 
+    /// Seleziona tutti gli elementi spostabili visibili (categoria e rischio massimo correnti).
+    func selectAllVisible(in category: CleanupCategory?) {
+        for f in findings(in: category) where f.actionable {
+            selection.insert(f.path)
+        }
+    }
+
+    /// `true` se tutti gli elementi spostabili visibili sono selezionati (e ce n'è almeno uno).
+    func allVisibleSelected(in category: CleanupCategory?) -> Bool {
+        let paths = findings(in: category).filter(\.actionable).map(\.path)
+        return !paths.isEmpty && paths.allSatisfy(selection.contains)
+    }
+
+    /// Seleziona tutti gli elementi visibili, oppure li deseleziona se lo sono già.
+    func toggleAllVisible(in category: CleanupCategory?) {
+        if allVisibleSelected(in: category) {
+            selection.subtract(findings(in: category).map(\.path))
+        } else {
+            selectAllVisible(in: category)
+        }
+    }
+
+    /// Quanti elementi selezionati non sono a rischio "sicuro" (da segnalare nella conferma).
+    var selectedRiskyCount: Int { selectedFindings.filter { $0.risk != .safe }.count }
+
+    func deselectAll() {
+        selection.removeAll()
+    }
+
     func toggle(_ finding: Finding) {
         if selection.contains(finding.path) {
             selection.remove(finding.path)
