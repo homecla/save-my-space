@@ -1,5 +1,8 @@
 # Save My Space
 
+[![CI](https://github.com/homecla/save-my-space/actions/workflows/ci.yml/badge.svg)](https://github.com/homecla/save-my-space/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/homecla/save-my-space/actions/workflows/codeql.yml/badge.svg)](https://github.com/homecla/save-my-space/actions/workflows/codeql.yml)
+
 [English](README.md) · **Italiano**
 
 Analizza la tua home su macOS e suggerisce cosa pulire. Si usa da riga di comando (`smspace`)
@@ -43,6 +46,7 @@ smspace history                  # storico delle pulizie (numerate: #1 = la più
 smspace history -d               # con i singoli elementi e dove sono nel Cestino
 smspace restore                  # ripristina l'ultima pulizia
 smspace restore --entry 2 --path ~/Library/Caches/pip   # solo un elemento di una pulizia precedente
+smspace restore --root /Volumes/Disco # pulizie fatte con --path fuori dalla home
 
 smspace gui                      # apre l'interfaccia grafica
 ```
@@ -74,6 +78,14 @@ Nell'app la lingua si cambia da *Impostazioni* (Automatica / English / Italiano)
 
 Per un'analisi completa concedi l'*Accesso completo al disco* al Terminale
 (Impostazioni di Sistema › Privacy e sicurezza).
+
+## Sicurezza
+
+- `restore` rimette gli elementi solo dentro la tua home (o nella cartella indicata con `--root`)
+  e solo dal tuo Cestino: uno storico manomesso non può spostare file altrove.
+- A ogni push girano i test, le regole [opengrep](https://github.com/opengrep/opengrep) del progetto
+  (`.opengrep/`), [gitleaks](https://github.com/gitleaks/gitleaks) e CodeQL.
+  Gli stessi controlli in locale: `make sast`.
 
 ## Compilazione
 

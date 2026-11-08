@@ -1,5 +1,8 @@
 # Save My Space
 
+[![CI](https://github.com/homecla/save-my-space/actions/workflows/ci.yml/badge.svg)](https://github.com/homecla/save-my-space/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/homecla/save-my-space/actions/workflows/codeql.yml/badge.svg)](https://github.com/homecla/save-my-space/actions/workflows/codeql.yml)
+
 **English** · [Italiano](README.it.md)
 
 Analyzes your macOS home folder and suggests what to clean up. Use it from the command line
@@ -43,6 +46,7 @@ smspace history                  # cleanup history (numbered: #1 = most recent)
 smspace history -d               # with each item and where it is in the Trash
 smspace restore                  # restore the last cleanup
 smspace restore --entry 2 --path ~/Library/Caches/pip   # one item of an earlier cleanup
+smspace restore --root /Volumes/Disk # cleanups made with --path outside the home
 
 smspace gui                      # open the graphical interface
 ```
@@ -73,6 +77,14 @@ In the app, change it from *Settings* (Automatic / English / Italiano).
 
 For a complete analysis, grant *Full Disk Access* to your terminal
 (System Settings › Privacy & Security).
+
+## Security
+
+- `restore` only puts items back inside your home folder (or the folder given with `--root`)
+  and only from your own Trash, so a tampered history file cannot move files elsewhere.
+- Every push runs the tests, project-specific [opengrep](https://github.com/opengrep/opengrep)
+  rules (`.opengrep/`), [gitleaks](https://github.com/gitleaks/gitleaks) and CodeQL.
+  Run the same checks locally with `make sast`.
 
 ## Building
 

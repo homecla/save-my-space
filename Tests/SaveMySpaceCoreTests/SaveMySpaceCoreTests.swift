@@ -285,7 +285,7 @@ private func scan(_ home: FakeHome, large: Int64 = 5_000_000) throws -> ScanRepo
     let outside = TrashedItem(finding: Finding(path: "/etc/hosts", size: 1, category: .caches, risk: .safe, reason: ""),
                               trashedTo: trash.appendingPathComponent("cache-a").path)
 
-    let restorer = Restorer()
+    let restorer = Restorer(allowedRoot: home.root)
     let root = home.root.path
     #expect(restorer.state(of: a, root: root) == .restorable)
     #expect(restorer.state(of: b, root: root) == .conflict)
@@ -331,4 +331,30 @@ private func scan(_ home: FakeHome, large: Int64 = 5_000_000) throws -> ScanRepo
     #expect(Sanitize.forSpreadsheet("+1") == "'+1")
     #expect(Sanitize.forSpreadsheet("/Users/a/b") == "/Users/a/b")
     #expect(Encoding.csvLine(["@cmd", "ok"]) == "'@cmd,ok")
+}
+
+@Test func restorerRejectsTamperedHistory() throws {
+    let home = try FakeHome()
+    let elsewhere = try FakeHome()
+    try home.file(".Trash/item/blob", size: 10)
+    try elsewhere.file(".Trash/item/blob", size: 10)
+    let restorer = Restorer(allowedRoot: home.root)
+
+    // Radice della voce manomessa ("/"): il ripristino resta confinato alla radice consentita.
+    let outsideOriginal = TrashedItem(
+        finding: Finding(path: elsewhere.root.appendingPathComponent("Library/LaunchAgents/x").path,
+                         size: 10, category: .caches, risk: .safe, reason: ""),
+        trashedTo: home.root.appendingPathComponent(".Trash/item").path)
+    if case .invalid = restorer.state(of: outsideOriginal, root: "/") {} else { Issue.record("atteso invalid") }
+
+    // Una cartella ".Trash" qualunque non è il Cestino dell'utente.
+    let fakeTrash = TrashedItem(
+        finding: Finding(path: home.root.appendingPathComponent("Library/Caches/item").path,
+                         size: 10, category: .caches, risk: .safe, reason: ""),
+        trashedTo: elsewhere.root.appendingPathComponent(".Trash/item").path)
+    if case .invalid = restorer.state(of: fakeTrash, root: home.root.path) {} else { Issue.record("atteso invalid") }
+
+    // La stessa voce, con il Cestino giusto, è ripristinabile.
+    let legit = TrashedItem(finding: fakeTrash.finding, trashedTo: home.root.appendingPathComponent(".Trash/item").path)
+    #expect(restorer.state(of: legit, root: home.root.path) == .restorable)
 }

@@ -426,6 +426,10 @@ struct Restore: ParsableCommand {
                                             "Ripristina solo gli elementi con questo percorso originale (o al suo interno). Ripetibile."))
     var path: [String] = []
 
+    @Option(name: .long, help: help("Folder inside which restoring is allowed (default: your home). Needed for cleanups made with --path outside the home.",
+                                    "Cartella in cui è consentito ripristinare (predefinita: la home). Serve per le pulizie fatte con --path fuori dalla home."))
+    var root: String?
+
     @Flag(name: .shortAndLong, help: help("Don't ask for confirmation.", "Non chiede conferma."))
     var yes = false
 
@@ -458,7 +462,7 @@ struct Restore: ParsableCommand {
             return
         }
 
-        let restorer = Restorer()
+        let restorer = Restorer(allowedRoot: root.map(Files.url) ?? FileManager.default.homeDirectoryForCurrentUser)
         print(Terminal.bold(tr("Cleanup #\(entry) of \(L10n.dateTime(chosen.date))",
                                "Pulizia #\(entry) del \(L10n.dateTime(chosen.date))")))
         var restorable: [TrashedItem] = []

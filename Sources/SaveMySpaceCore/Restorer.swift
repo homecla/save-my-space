@@ -39,11 +39,30 @@ public struct Restorer: Sendable {
     public typealias MoveFunction = @Sendable (_ from: URL, _ to: URL) throws -> Void
 
     private let move: MoveFunction
+    /// Unica cartella in cui è consentito ripristinare (di norma la home). Lo storico è un file
+    /// modificabile: senza questo limite una voce manomessa potrebbe indicare qualunque radice.
+    public let allowedRoot: URL
 
-    public init(move: @escaping MoveFunction = { from, to in
-        try FileManager.default.moveItem(at: from, to: to)
-    }) {
+    public init(
+        allowedRoot: URL = FileManager.default.homeDirectoryForCurrentUser,
+        move: @escaping MoveFunction = { from, to in
+            try FileManager.default.moveItem(at: from, to: to)
+        }
+    ) {
+        self.allowedRoot = allowedRoot.canonical
         self.move = move
+    }
+
+    /// `true` se il percorso è in un Cestino dell'utente corrente: `<allowedRoot>/.Trash`,
+    /// `~/.Trash` oppure `/Volumes/<disco>/.Trashes/<uid>` per i dischi esterni.
+    private func isUserTrash(_ url: URL) -> Bool {
+        let resolved = url.deletingLastPathComponent().canonical.appendingPathComponent(url.lastPathComponent)
+        let homes = [allowedRoot, FileManager.default.homeDirectoryForCurrentUser.canonical]
+        if homes.contains(where: { resolved.isInside($0.appendingPathComponent(".Trash")) && resolved != $0.appendingPathComponent(".Trash") }) {
+            return true
+        }
+        let comps = resolved.pathComponents   // ["/", "Volumes", "<disco>", ".Trashes", "<uid>", ...]
+        return comps.count > 5 && comps[1] == "Volumes" && comps[3] == ".Trashes" && comps[4] == String(getuid())
     }
 
     public func state(of item: TrashedItem, root: String) -> RestoreState {
@@ -51,9 +70,8 @@ public struct Restorer: Sendable {
             return .invalid(tr("unknown location in the Trash", "posizione nel Cestino sconosciuta"))
         }
         let trashURL = URL(fileURLWithPath: trashedTo).standardized
-        let comps = trashURL.pathComponents
-        guard comps.contains(".Trash") || comps.contains(".Trashes") else {
-            return .invalid(tr("the recorded location is not in the Trash", "la posizione registrata non è nel Cestino"))
+        guard isUserTrash(trashURL) else {
+            return .invalid(tr("the recorded location is not in your Trash", "la posizione registrata non è nel tuo Cestino"))
         }
         let original = URL(fileURLWithPath: item.finding.path).standardized
         // Confronto su percorsi risolti (es. /private/tmp e /tmp indicano la stessa cartella).
@@ -62,6 +80,10 @@ public struct Restorer: Sendable {
             .appendingPathComponent(original.lastPathComponent)
         guard resolvedOriginal.isInside(resolvedRoot), resolvedOriginal.path != resolvedRoot.path else {
             return .invalid(tr("the original location is outside \(root)", "la posizione originale è fuori da \(root)"))
+        }
+        guard resolvedOriginal.isInside(allowedRoot), resolvedOriginal.path != allowedRoot.path else {
+            return .invalid(tr("the original location is outside \(allowedRoot.path) (use --root to allow it)",
+                               "la posizione originale è fuori da \(allowedRoot.path) (usa --root per consentirlo)"))
         }
         let inTrash = FileStats.exists(trashURL)
         let atOriginal = FileStats.exists(original)
